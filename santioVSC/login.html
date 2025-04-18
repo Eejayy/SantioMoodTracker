@@ -1,0 +1,909 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodTracker - Login</title>
+    <!-- Import Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Import Firebase SDKs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #5e72e4;
+            --secondary-color: #f7fafc;
+            --text-color: #525f7f;
+            --error-color: #f5365c;
+            --success-color: #2dce89;
+            --warning-color: #ffc107;
+            --border-color: #e9ecef;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-color);
+        }
+
+        .container {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+        }
+
+        .card {
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 15px 35px var(--shadow-color);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        .card-body {
+            padding: 30px;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 25px;
+            border-bottom: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            position: relative;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+            z-index: 1;
+        }
+
+        .tab.active {
+            color: var(--primary-color);
+        }
+
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: -1px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: var(--primary-color);
+        }
+
+        .form-container {
+            display: none;
+        }
+
+        .form-container.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+        
+        .password-toggle {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: none;
+            border: none;
+            color: #8898aa;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+
+        .btn {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #4763e0;
+        }
+
+        .btn-google {
+            background-color: white;
+            color: var(--text-color);
+            border: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 15px;
+        }
+
+        .btn-google:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .btn-google img {
+            width: 18px;
+            margin-right: 10px;
+        }
+
+        .divider {
+            text-align: center;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .divider::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 0;
+            width: 45%;
+            height: 1px;
+            background-color: var(--border-color);
+        }
+
+        .divider::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            right: 0;
+            width: 45%;
+            height: 1px;
+            background-color: var(--border-color);
+        }
+
+        .error-message, .success-message, .warning-message {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .error-message {
+            background-color: rgba(245, 54, 92, 0.1);
+            color: var(--error-color);
+        }
+
+        .success-message {
+            background-color: rgba(45, 206, 137, 0.1);
+            color: var(--success-color);
+        }
+
+        .warning-message {
+            background-color: rgba(255, 193, 7, 0.1);
+            color: var(--warning-color);
+        }
+
+        .forgot-password {
+            text-align: right;
+            margin-bottom: 20px;
+        }
+
+        .forgot-password a {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-size: 14px;
+        }
+
+        .forgot-password a:hover {
+            text-decoration: underline;
+        }
+
+        /* Loader */
+        .loader {
+            display: none;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 2px solid white;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .btn.loading .btn-text {
+            display: none;
+        }
+
+        .btn.loading .loader {
+            display: block;
+        }
+
+        /* Password Strength Meter */
+        .password-strength {
+            height: 4px;
+            background-color: var(--border-color);
+            border-radius: 2px;
+            margin-top: 8px;
+            overflow: hidden;
+        }
+
+        .password-strength-meter {
+            height: 100%;
+            width: 0%;
+            transition: all 0.3s;
+        }
+
+        .password-strength-text {
+            font-size: 12px;
+            margin-top: 5px;
+            color: var(--text-light);
+        }
+
+        .password-weak {
+            width: 33%;
+            background-color: var(--error-color);
+        }
+
+        .password-medium {
+            width: 66%;
+            background-color: var(--warning-color);
+        }
+
+        .password-strong {
+            width: 100%;
+            background-color: var(--success-color);
+        }
+
+        /* Logout button */
+        #logout-container {
+            display: none;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            z-index: 100;
+        }
+
+        #logout-button {
+            width: auto;
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+
+        /* Responsive */
+        @media screen and (max-width: 480px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .card-body {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="card-header">
+                <div class="logo">MoodTracker</div>
+                <p>Track your emotions, understand yourself</p>
+            </div>
+            <div class="card-body">
+                <div class="tabs">
+                    <div class="tab active" id="login-tab">Login</div>
+                    <div class="tab" id="signup-tab">Sign Up</div>
+                    <div id="logout-container">
+                        <button id="logout-button" class="btn btn-primary">Sign Out</button>
+                    </div>
+                </div>
+
+                <div class="error-message" id="error-message"></div>
+                <div class="success-message" id="success-message"></div>
+                <div class="warning-message" id="warning-message"></div>
+
+                <!-- Login Form -->
+                <div class="form-container active" id="login-form">
+                    <div class="form-group">
+                        <input type="email" class="form-control" id="login-email" placeholder="Email Address" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" class="form-control" id="login-password" placeholder="Password" required>
+                        <button type="button" class="password-toggle" id="login-password-toggle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="forgot-password">
+                        <a href="#" id="forgot-password">Forgot Password?</a>
+                    </div>
+                    <button class="btn btn-primary" id="login-button">
+                        <span class="btn-text">Login</span>
+                        <div class="loader"></div>
+                    </button>
+
+                    <div class="divider">OR</div>
+
+                    <button class="btn btn-google" id="google-login-button">
+                        <img src="https://raw.githubusercontent.com/github/explore/80688e429a7d4ef2fca1e82350fe8e3517d3494d/topics/google/google.png" alt="Google">
+                        <span class="btn-text">Continue with Google</span>
+                        <div class="loader"></div>
+                    </button>
+                </div>
+
+                <!-- Sign Up Form -->
+                <div class="form-container" id="signup-form">
+                    <div class="form-group">
+                        <input type="text" class="form-control" id="signup-name" placeholder="Username" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="email" class="form-control" id="signup-email" placeholder="Email Address" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" class="form-control" id="signup-password" placeholder="Password" required>
+                        <button type="button" class="password-toggle" id="signup-password-toggle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <div class="password-strength">
+                            <div class="password-strength-meter" id="password-strength-meter"></div>
+                        </div>
+                        <div class="password-strength-text" id="password-strength-text">Password should be at least 8 characters with letters, numbers and special characters</div>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" class="form-control" id="signup-confirm-password" placeholder="Confirm Password" required>
+                        <button type="button" class="password-toggle" id="signup-confirm-password-toggle">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <button class="btn btn-primary" id="signup-button">
+                        <span class="btn-text">Sign Up</span>
+                        <div class="loader"></div>
+                    </button>
+
+                    <div class="divider">OR</div>
+
+                    <button class="btn btn-google" id="google-signup-button">
+                        <img src="https://raw.githubusercontent.com/github/explore/80688e429a7d4ef2fca1e82350fe8e3517d3494d/topics/google/google.png" alt="Google">
+                        <span class="btn-text">Sign Up with Google</span>
+                        <div class="loader"></div>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        //login.html
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAPSIaP-C20Hf1MFn0efE-jIMBSIGqdgDc",
+            authDomain: "santio-4b3ba.firebaseapp.com",
+            projectId: "santio-4b3ba",
+            storageBucket: "santio-4b3ba.firebasestorage.app",
+            messagingSenderId: "954824220906",
+            appId: "1:954824220906:web:c5c861c161594014553793",
+            measurementId: "G-J2HHELZRD3"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // Initialize default emojis if they don't exist yet
+        async function initDefaultEmojis() {
+            const defaultEmojis = [
+                {
+                    id: 'happy',
+                    name: 'happy',
+                    imageURL: 'https://raw.githubusercontent.com/Eejayy/SantioMoodTracker/main/emojis/happy.png'
+                },
+                {
+                    id: 'sad',
+                    name: 'sad',
+                    imageURL: 'https://raw.githubusercontent.com/Eejayy/SantioMoodTracker/main/emojis/sad.png'
+                },
+                {
+                    id: 'angry',
+                    name: 'angry',
+                    imageURL: 'https://raw.githubusercontent.com/Eejayy/SantioMoodTracker/main/emojis/angry.png'
+                }
+            ];
+
+            // Add each emoji to the collection if it doesn't exist
+            for (const emoji of defaultEmojis) {
+                const emojiDoc = await db.collection('emoji').doc(emoji.id).get();
+                if (!emojiDoc.exists) {
+                    await db.collection('emoji').doc(emoji.id).set({
+                        name: emoji.name,
+                        imageURL: emoji.imageURL
+                    });
+                    console.log(`Created emoji: ${emoji.name}`);
+                }
+            }
+        }
+
+        // Call this function when the app initializes
+        initDefaultEmojis().catch(error => {
+            console.error("Error initializing emojis:", error);
+        });
+
+        // DOM Elements
+        const loginTab = document.getElementById('login-tab');
+        const signupTab = document.getElementById('signup-tab');
+        const loginForm = document.getElementById('login-form');
+        const signupForm = document.getElementById('signup-form');
+        const loginButton = document.getElementById('login-button');
+        const signupButton = document.getElementById('signup-button');
+        const googleLoginButton = document.getElementById('google-login-button');
+        const googleSignupButton = document.getElementById('google-signup-button');
+        const forgotPasswordLink = document.getElementById('forgot-password');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+        const warningMessage = document.getElementById('warning-message');
+        const passwordStrengthMeter = document.getElementById('password-strength-meter');
+        const passwordStrengthText = document.getElementById('password-strength-text');
+        const passwordInput = document.getElementById('signup-password');
+        const logoutContainer = document.getElementById('logout-container');
+        const logoutButton = document.getElementById('logout-button');
+        
+        // Password toggle buttons
+        const loginPasswordToggle = document.getElementById('login-password-toggle');
+        const signupPasswordToggle = document.getElementById('signup-password-toggle');
+        const signupConfirmPasswordToggle = document.getElementById('signup-confirm-password-toggle');
+        const loginPassword = document.getElementById('login-password');
+        const signupConfirmPassword = document.getElementById('signup-confirm-password');
+
+        // Tab switching functionality - FIXED VERSION
+        loginTab.addEventListener('click', function() {
+            loginTab.classList.add('active');
+            signupTab.classList.remove('active');
+            loginForm.classList.add('active');
+            signupForm.classList.remove('active');
+            hideMessages();
+        });
+
+        signupTab.addEventListener('click', function() {
+            signupTab.classList.add('active');
+            loginTab.classList.remove('active');
+            signupForm.classList.add('active');
+            loginForm.classList.remove('active');
+            hideMessages();
+        });
+        
+        // Password visibility toggle
+        loginPasswordToggle.addEventListener('click', function() {
+            togglePasswordVisibility(loginPassword, loginPasswordToggle);
+        });
+        
+        signupPasswordToggle.addEventListener('click', function() {
+            togglePasswordVisibility(passwordInput, signupPasswordToggle);
+        });
+        
+        signupConfirmPasswordToggle.addEventListener('click', function() {
+            togglePasswordVisibility(signupConfirmPassword, signupConfirmPasswordToggle);
+        });
+        
+        function togglePasswordVisibility(passwordField, toggleButton) {
+            const type = passwordField.getAttribute('type') === 'password' ? 'text' : 'password';
+            passwordField.setAttribute('type', type);
+            
+            // Toggle icon between eye and eye-slash
+            const icon = toggleButton.querySelector('i');
+            icon.classList.toggle('fa-eye');
+            icon.classList.toggle('fa-eye-slash');
+        }
+
+        // Password strength checker
+        if(passwordInput) {
+            passwordInput.addEventListener('input', function() {
+                checkPasswordStrength();
+            });
+        }
+
+        function checkPasswordStrength() {
+            if (!passwordInput || !passwordStrengthMeter || !passwordStrengthText) {
+                console.error("Password elements not found");
+                return;
+            }
+            
+            const password = passwordInput.value;
+            let strength = 0;
+            let feedback = '';
+
+            if (password.length === 0) {
+                passwordStrengthMeter.className = '';
+                passwordStrengthMeter.style.width = '0%';
+                passwordStrengthText.textContent = 'Password should be at least 8 characters with letters, numbers and special characters';
+                return;
+            }
+
+            // Check password length
+            if (password.length >= 8) {
+                strength += 1;
+            } else {
+                feedback = 'Password should be at least 8 characters';
+            }
+
+            // Check for uppercase letters
+            if (/[A-Z]/.test(password)) {
+                strength += 1;
+            }
+
+            // Check for lowercase letters
+            if (/[a-z]/.test(password)) {
+                strength += 1;
+            }
+
+            // Check for numbers
+            if (/[0-9]/.test(password)) {
+                strength += 1;
+            }
+
+            // Check for special characters
+            if (/[^A-Za-z0-9]/.test(password)) {
+                strength += 1;
+            }
+
+            // Update the password strength meter
+            if (strength <= 2) {
+                passwordStrengthMeter.className = 'password-strength-meter password-weak';
+                feedback = feedback || 'Weak password - add uppercase, numbers, or special characters';
+            } else if (strength <= 4) {
+                passwordStrengthMeter.className = 'password-strength-meter password-medium';
+                feedback = feedback || 'Medium password - make it stronger with more character types';
+            } else {
+                passwordStrengthMeter.className = 'password-strength-meter password-strong';
+                feedback = 'Strong password';
+            }
+
+            passwordStrengthText.textContent = feedback;
+            return strength;
+        }
+
+        // Email/Password Login
+        loginButton.addEventListener('click', async () => {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+            
+            if (!email || !password) {
+                showError('Please enter both email and password.');
+                return;
+            }
+
+            setLoading(loginButton, true);
+            hideMessages();
+
+            try {
+                //create user with email & password
+                const userCredential = await auth.signInWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                //verify email sent
+                if (!user.emailVerified) {
+                    await user.sendEmailVerification();
+                    await auth.signOut();
+                    showWarning('Please verify your email. A new verification link has been sent.');
+                } else {
+                    showSuccess('Login successful! Redirecting...');
+                    setTimeout(() => {
+                        window.location.href = 'dashboard.html';
+                    }, 1500);
+                }
+            } catch (error) {
+                showError(getErrorMessage(error));
+            } finally {
+                setLoading(loginButton, false);
+            }
+        });
+
+        // Email/Password Sign Up
+        signupButton.addEventListener('click', async () => {
+            const name = document.getElementById('signup-name').value;
+            const email = document.getElementById('signup-email').value;
+            const password = document.getElementById('signup-password').value;
+            const confirmPassword = document.getElementById('signup-confirm-password').value;
+            
+            if (!name || !email || !password || !confirmPassword) {
+                showError('Please fill in all fields.');
+                return;
+            }
+
+            if (password !== confirmPassword) {
+                showError('Passwords do not match.');
+                return;
+            }
+
+            // Validate password strength
+            const passwordStrength = checkPasswordStrength();
+            if (passwordStrength <= 2) {
+                showError('Password is too weak. Please create a stronger password.');
+                return;
+            }
+
+            setLoading(signupButton, true);
+            hideMessages();
+
+            try {
+                // Create user with email and password
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+                const user = userCredential.user;
+                
+                // Create user document in Firestore with the proper structure
+                await db.collection('users').doc(user.uid).set({
+                    name: name,
+                    email: email,
+                    createdAt: new Date().toISOString()
+                });
+                
+                // Create a welcome mood entry for the user
+                const today = new Date();
+                const dateString = today.toISOString().split('T')[0]; // Format: YYYY-MM-DD
+                
+                await db.collection('users').doc(user.uid)
+                    .collection('moods')
+                    .doc(dateString)
+                    .set({
+                        note: "Welcome to MoodTracker! This is your first mood entry.",
+                        createdAt: new Date().toISOString(),
+                        emojiID: ["/emoji/happy"]
+                    });
+                    
+                console.log("Created user and initial mood entry");
+                
+                // Send email verification
+                await user.sendEmailVerification();
+                
+                showSuccess('Account created successfully! Please check your email to verify your account.');
+                setTimeout(() => {
+                    loginTab.click();
+                }, 2000);
+            } catch (error) {
+                showError(getErrorMessage(error));
+            } finally {
+                setLoading(signupButton, false);
+            }
+        });
+
+        // Google Authentication
+        googleLoginButton.addEventListener('click', () => {
+            handleGoogleAuth(googleLoginButton, 'login');
+        });
+
+        googleSignupButton.addEventListener('click', () => {
+            handleGoogleAuth(googleSignupButton, 'signup');
+        });
+
+        async function handleGoogleAuth(button, mode) {
+            setLoading(button, true);
+            hideMessages();
+
+            try {
+                const provider = new firebase.auth.GoogleAuthProvider();
+                provider.addScope('profile');
+                provider.addScope('email');
+                
+                const result = await auth.signInWithPopup(provider);
+                const user = result.user;
+                
+                // Create/update user profile in Firestore
+                await db.collection('users').doc(user.uid).set({
+                    name: user.displayName || 'Google User',
+                    email: user.email,
+                    photoURL: user.photoURL || '',
+                    createdAt: new Date().toISOString(),
+                    authProvider: 'google'
+                }, { merge: true });
+
+                // Create welcome mood entry
+                const today = new Date();
+                const dateStr = today.toISOString().split('T')[0];
+                
+                await db.collection('users').doc(user.uid)
+                    .collection('moods')
+                    .doc(dateStr)
+                    .set({
+                        note: "Welcome to MoodTracker! This is your first mood entry.",
+                        createdAt: new Date().toISOString(),
+                        emojiID: ["/emoji/happy"]
+                    });
+
+                showSuccess('Login successful! Redirecting to dashboard...');
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 1500);
+            } catch (error) {
+                console.error("Google sign-in error:", error);
+                showError(getErrorMessage(error));
+            } finally {
+                setLoading(button, false);
+            }
+        }
+
+        // Forgot Password
+        forgotPasswordLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            
+            if (!email) {
+                showError('Please enter your email address first.');
+                return;
+            }
+
+            hideMessages();
+            setLoading(loginButton, true);
+
+            try {
+                await auth.sendPasswordResetEmail(email);
+                showSuccess('Password reset email sent. Please check your inbox.');
+            } catch (error) {
+                showError(getErrorMessage(error));
+            } finally {
+                setLoading(loginButton, false);
+            }
+        });
+
+        // Check Authentication State
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                const uid = user.uid;
+                const email = user.email;
+                const name = user.displayName || 'No name set';
+                const photo = user.photoURL || 'default-avatar.png';
+                console.log("User info: ");
+                console.log("UID: ", uid);
+                console.log("email: ", email);
+                console.log("name: ", name);
+                console.log("photo path: ", photo);
+
+                // Log authentication state
+                console.log('User is signed in:', user.email);
+                
+                // Show logout button when user is signed in
+                logoutContainer.style.display = 'block';
+                
+                // If user is verified, redirect to dashboard
+                if (user.emailVerified) {
+                    console.log('User is verified, redirecting to dashboard');
+                    // window.location.href = 'dashboard.html';
+                } else {
+                    // Show message if email not verified
+                    showWarning('Please verify your email to continue. Check your inbox.');
+                }
+            } else {
+                // Hide logout button when no user is signed in
+                logoutContainer.style.display = 'none';
+            }
+        });
+        
+        // Logout functionality
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await auth.signOut();
+                showSuccess('Successfully signed out');
+                loginTab.click(); // Switch to login tab
+            } catch (error) {
+                showError('Error signing out: ' + error.message);
+            }
+        });
+
+        // Helper Functions
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+            successMessage.style.display = 'none';
+            warningMessage.style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            successMessage.textContent = message;
+            successMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+            warningMessage.style.display = 'none';
+        }
+
+        function showWarning(message) {
+            warningMessage.textContent = message;
+            warningMessage.style.display = 'block';
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+        }
+
+        function hideMessages() {
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            warningMessage.style.display = 'none';
+        }
+
+        function setLoading(button, isLoading) {
+            if (isLoading) {
+                button.classList.add('loading');
+                button.disabled = true;
+            } else {
+                button.classList.remove('loading');
+                button.disabled = false;
+            }
+        }
+
+        function getErrorMessage(error) {
+            switch (error.code) {
+                case 'auth/user-not-found':
+                    return 'No account found with this email address.';
+                case 'auth/wrong-password':
+                    return 'Incorrect password. Please try again.';
+                case 'auth/invalid-email':
+                    return 'Please enter a valid email address.';
+                case 'auth/email-already-in-use':
+                    return 'This email is already registered. Try logging in instead.';
+                case 'auth/weak-password':
+                    return 'Password is too weak. Please use a stronger password.';
+                case 'auth/network-request-failed':
+                    return 'Network error. Please check your connection and try again.';
+                case 'auth/popup-closed-by-user':
+                    return 'Authentication canceled. Please try again.';
+                case 'auth/cancelled-popup-request':
+                    return 'Another authentication window is already open.';
+                case 'auth/popup-blocked':
+                    return 'Authentication popup was blocked by your browser.';
+                default:
+                    return `Authentication error: ${error.message}`;
+            }
+        }
+
+        // This ensures the tab switching is working properly
+        console.log("Login page initialized.");
+    </script>
+</body>
+</html>
