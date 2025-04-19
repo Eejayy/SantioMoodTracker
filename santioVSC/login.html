@@ -3,22 +3,22 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoodTracker - Login</title>
+    <link rel="icon" href="santio3.png" type="image/x-icon">
+    <title>Santio - Login</title>
     <!-- Import Font Awesome for icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Import Firebase SDKs -->
+    <script src="config.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
     <style>
         :root {
-            --primary-color: #5e72e4;
-            --secondary-color: #f7fafc;
             --text-color: #525f7f;
             --error-color: #f5365c;
             --success-color: #2dce89;
             --warning-color: #ffc107;
-            --border-color: #e9ecef;
+            --border-color: #232324;
             --shadow-color: rgba(0, 0, 0, 0.05);
         }
 
@@ -30,32 +30,144 @@
         }
 
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            height: 100vh;
+            margin: 0;
+            min-height: 100vh; /* Use min-height instead of height */
+            width: 100%;
+            overflow-y: auto; /* Allow vertical scrolling if needed */
+            overflow-x: hidden;
             display: flex;
             align-items: center;
             justify-content: center;
             color: var(--text-color);
+            position: relative;
+            background-color: #27272b;
         }
 
-        .container {
+        .animated-background {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
-            max-width: 400px;
-            padding: 15px;
-        }
-
-        .card {
-            background-color: white;
-            border-radius: 10px;
-            box-shadow: 0 15px 35px var(--shadow-color);
+            height: 100%;
+            z-index: -1;
             overflow: hidden;
         }
 
+        .circle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.7;
+            filter: blur(60px);
+            animation: float 15s infinite ease-in-out;
+        }
+
+        .circle:nth-child(1) {
+            background-color: #9a8580;
+            width: 2300px;
+            height: 2300px;
+            top: 0%;
+            left: 0%;
+            animation-delay: 0s;
+        }
+
+        .circle:nth-child(2) {
+            background-color: #383732;
+            width: 800px;
+            height: 400px;
+            top: 5%;
+            left: 30%;
+            animation-delay: 2s;
+        }
+
+        .circle:nth-child(3) {
+            background-color: #d8eedd;
+            width: 550px;
+            height: 550px;
+            top: 60%;
+            left: 0%;
+            animation-delay: -2s;
+        }
+
+        .circle:nth-child(4) {
+            background-color: #ba8d67;
+            width: 1000px;
+            height: 800px;
+            top: 50%;
+            left: 60%;
+            animation-delay: -4s;
+        }
+
+        .circle:nth-child(5) {
+            background-color: #cdb999;
+            width: 2300px;
+            height: 300px;
+            top: 10%;
+            left: 70%;
+            animation-delay: -6s;
+        }
+
+        .circle:nth-child(6) {
+            background-color: #ac9a82;
+            width: 800px;
+            height: 500px;
+            top: 5%;
+            left: 5%;
+            animation-delay: -8s;
+        }
+
+        .circle:nth-child(7) {
+            background-color: #c2d1bb;
+            width: 400px;
+            height: 500px;
+            top: -15%;
+            left: 50%;
+            animation-delay: 5s;
+        }
+
+        @keyframes float {
+            0% {
+                transform: translate(0, 0) scale(1);
+            }
+            33% {
+                transform: translate(50px, 30px) scale(1.5);
+            }
+            66% {
+                transform: translate(-20px, 40px) scale(1.3);
+            }
+            100% {
+                transform: translate(0, 0) scale(1);
+            }
+        }
+
+        .card {
+            background-color: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 10px;
+            box-shadow: 0 15px 35px var(--shadow-color);
+            overflow: hidden;
+            position: relative;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 300 300' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+            opacity: 0.1;
+            pointer-events: none;
+            z-index: 1;
+        }
+
         .card-header {
-            background-color: var(--primary-color);
+            background-color: #57473f; 
             color: white;
             padding: 20px;
             text-align: center;
+            position: relative;
+            z-index: 2;
         }
 
         .logo {
@@ -66,15 +178,16 @@
 
         .card-body {
             padding: 30px;
+            position: relative;
+            z-index: 2;
         }
 
         .tabs {
             display: flex;
             margin-bottom: 25px;
-            border-bottom: 1px solid var(--border-color);
+            border-bottom: 1px solid rgba(50, 45, 45, 0.3);
             position: relative;
         }
-
         .tab {
             flex: 1;
             text-align: center;
@@ -82,13 +195,13 @@
             cursor: pointer;
             font-weight: 500;
             position: relative;
-            color: var(--text-color);
+            color: #766f6d;
             transition: all 0.3s ease;
             z-index: 1;
         }
 
         .tab.active {
-            color: var(--primary-color);
+            color: #3d2a20;
         }
 
         .tab.active::after {
@@ -98,7 +211,7 @@
             left: 0;
             width: 100%;
             height: 2px;
-            background-color: var(--primary-color);
+            background-color: #3d2a20;
         }
 
         .form-container {
@@ -115,33 +228,46 @@
         }
 
         .form-control {
+            background-color: #7f7069;
+            color: antiquewhite;
             width: 100%;
             padding: 12px 15px;
             font-size: 14px;
-            border: 1px solid var(--border-color);
+            border: none;
             border-radius: 5px;
             transition: border-color 0.3s;
         }
 
         .form-control:focus {
             outline: none;
-            border-color: var(--primary-color);
+            border-color: #ba8d67;
         }
-        
+        ::placeholder {
+            color: #ded3b2;
+        }
         .password-toggle {
             position: absolute;
             right: 12px;
-            top: 50%;
+            top: 20px;
             transform: translateY(-50%);
             background: none;
             border: none;
-            color: #8898aa;
+            color: #ded3b2;
             cursor: pointer;
             font-size: 16px;
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 10;
+        }
+
+        /* For autofill background color fix */
+        input:-webkit-autofill,
+        input:-webkit-autofill:hover, 
+        input:-webkit-autofill:focus, 
+        input:-webkit-autofill:active {
+            -webkit-box-shadow: 0 0 0 30px #7f7069 inset !important;
+            -webkit-text-fill-color: antiquewhite !important;
         }
 
         .btn {
@@ -157,18 +283,19 @@
         }
 
         .btn-primary {
-            background-color: var(--primary-color);
+            background-color: #57473f;
             color: white;
         }
 
         .btn-primary:hover {
-            background-color: #4763e0;
+            background-color: #48382f;
         }
 
         .btn-google {
-            background-color: white;
+            background-color: rgb(255, 255, 255);
             color: var(--text-color);
-            border: 1px solid var(--border-color);
+            /* border: 1px solid var(--border-color); */
+            border: none;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -176,7 +303,7 @@
         }
 
         .btn-google:hover {
-            background-color: var(--secondary-color);
+            background-color: #f6eee8;
         }
 
         .btn-google img {
@@ -188,6 +315,7 @@
             text-align: center;
             margin: 20px 0;
             position: relative;
+            color: rgba(235, 213, 213, 0.8);
         }
 
         .divider::before {
@@ -197,7 +325,7 @@
             left: 0;
             width: 45%;
             height: 1px;
-            background-color: var(--border-color);
+            background-color: rgba(235, 213, 213, 0.8);
         }
 
         .divider::after {
@@ -207,7 +335,7 @@
             right: 0;
             width: 45%;
             height: 1px;
-            background-color: var(--border-color);
+            background-color: rgba(235, 213, 213, 0.8);
         }
 
         .error-message, .success-message, .warning-message {
@@ -239,7 +367,7 @@
         }
 
         .forgot-password a {
-            color: var(--primary-color);
+            color: #3d2a20;
             text-decoration: none;
             font-size: 14px;
         }
@@ -308,6 +436,96 @@
             width: 100%;
             background-color: var(--success-color);
         }
+        .logo-container {
+            position: relative;
+            width: 500px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            z-index: 2;
+            padding-left: 0; /* Remove the 15% padding that was pushing content */
+        }
+
+        /* Adjust container for the card */
+        .container {
+            width: 100%;
+            max-width: 400px;
+            padding: 15px;
+            z-index: 2;
+            margin: 0; /* Remove the 50px margin that was creating extra space */
+        }
+
+        .logo-santio{
+            width: 360px;
+            height: auto;
+            margin-bottom: 20px;
+        }
+        .introduction{
+            width: 500px;
+        }
+
+        .intro-header2{
+            font-size: 20px;
+        }
+
+        .logo-people {
+            width: 100%;
+            max-width: 500px;
+            height: auto;
+            margin-left: 0; /* Remove negative margin */
+            margin-top: 20px; /* Add some space after the text */
+        }
+        /* Create a wrapper to hold both logos and card side by side */
+
+        .content-wrapper {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 90%; /* Increased from 50% to use more screen space */
+            max-width: 500px;
+            margin: 0 40px;
+        }
+
+
+        /* Responsive adjustments */
+        @media screen and (max-width: 1000px) {
+            .content-wrapper {
+                flex-direction: column;
+                gap: 30px;
+            }
+            
+            .logo-container {
+                margin-right: 0;
+                margin-bottom: 30px;
+            }
+            
+            .container {
+                margin-left: 0;
+            }
+        }
+
+        /* For smaller mobile screens */
+        @media screen and (max-width: 480px) {
+            .logo-container {
+                width: 250px;
+            }
+            
+            .logo-santio {
+                width: 180px;
+            }
+            
+            .logo-people {
+                width: 220px;
+            }
+            
+            .container {
+                padding: 10px;
+            }
+            
+            .card-body {
+                padding: 20px;
+            }
+        }
 
         /* Logout button */
         #logout-container {
@@ -325,7 +543,7 @@
         }
 
         /* Responsive */
-        @media screen and (max-width: 480px) {
+        /* @media screen and (max-width: 480px) {
             .container {
                 padding: 10px;
             }
@@ -333,22 +551,47 @@
             .card-body {
                 padding: 20px;
             }
-        }
+        } */
     </style>
 </head>
 <body>
+    <div class="animated-background">
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+    </div>
+    <div class="content-wrapper">
+        <div class="logo-container">
+            <!-- Add your logo images here -->
+            <img src="santio_logo.png" alt="Santio Logo" class="logo-santio">
+            <div class="introduction">
+                <h1 class="intro-header1"r>Welcome to Santio</h1>
+                <h2 class="intro-header2">Your Daily Companion for Emotional Awareness</h2>
+                <p class="intro-summary">Emotions are part of every moment—and understanding them starts here.
+                    Whether you're riding a wave of joy or facing a quiet storm,
+                    Santio empowers you to recognize patterns, reflect on your day,
+                    and grow with greater emotional insight.</p>
+            </div>
+            <img src="people.png" alt="People Logo" class="logo-people">
+            <!-- You can add more logos if needed -->
+        </div>
+    </div>
     <div class="container">
         <div class="card">
             <div class="card-header">
-                <div class="logo">MoodTracker</div>
-                <p>Track your emotions, understand yourself</p>
+                <div class="logo">Santio Mood Tracker</div>
+                <p>Where Every Emotion Matters.</p>
             </div>
             <div class="card-body">
                 <div class="tabs">
                     <div class="tab active" id="login-tab">Login</div>
                     <div class="tab" id="signup-tab">Sign Up</div>
                     <div id="logout-container">
-                        <button id="logout-button" class="btn btn-primary">Sign Out</button>
+                        <!-- <button id="logout-button" class="btn btn-primary">Sign Out</button> -->
                     </div>
                 </div>
 
@@ -428,20 +671,25 @@
     <script>
         //login.html
         // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyAPSIaP-C20Hf1MFn0efE-jIMBSIGqdgDc",
-            authDomain: "santio-4b3ba.firebaseapp.com",
-            projectId: "santio-4b3ba",
-            storageBucket: "santio-4b3ba.firebasestorage.app",
-            messagingSenderId: "954824220906",
-            appId: "1:954824220906:web:c5c861c161594014553793",
-            measurementId: "G-J2HHELZRD3"
-        };
+        // const firebaseConfig = {
+        //     apiKey: "AIzaSyAPSIaP-C20Hf1MFn0efE-jIMBSIGqdgDc",
+        //     authDomain: "santio-4b3ba.firebaseapp.com",
+        //     projectId: "santio-4b3ba",
+        //     storageBucket: "santio-4b3ba.firebasestorage.app",
+        //     messagingSenderId: "954824220906",
+        //     appId: "1:954824220906:web:c5c861c161594014553793",
+        //     measurementId: "G-J2HHELZRD3"
+        // };
 
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const auth = firebase.auth();
-        const db = firebase.firestore();
+        // firebase.initializeApp(firebaseConfig);
+        // const auth = firebase.auth();
+        // const db = firebase.firestore();
+        // if (!firebase.apps.length) {
+        //     firebase.initializeApp(firebaseConfig);
+        // }
+        // const auth = firebase.auth();
+        const { auth, db } = initializeFirebase();
 
         // Initialize default emojis if they don't exist yet
         async function initDefaultEmojis() {
@@ -631,6 +879,18 @@
                 //create user with email & password
                 const userCredential = await auth.signInWithEmailAndPassword(email, password);
                 const user = userCredential.user;
+                //check if user exist in datavase
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if(!userDoc.exists){
+                    //not exist -> create user document 
+                    name: db.collection('users').doc(user.uid).set({
+                        name: user.displayName || email.split('@')[0],
+                        email: user.email,
+                        createdAt: new Date().toISOString()
+                    });
+                    console.log("Created missing user document in database");
+                }
+
                 //verify email sent
                 if (!user.emailVerified) {
                     await user.sendEmailVerification();
@@ -734,9 +994,16 @@
                 const provider = new firebase.auth.GoogleAuthProvider();
                 provider.addScope('profile');
                 provider.addScope('email');
-                
+                console.log("Starting Google sign-in process...");
                 const result = await auth.signInWithPopup(provider);
                 const user = result.user;
+                
+                console.log("Google auth successful:", user.uid);
+                console.log("User details from Google:", {
+                    displayName: user.displayName,
+                    email: user.email,
+                    photoURL: user.photoURL
+                });
                 
                 // Create/update user profile in Firestore
                 await db.collection('users').doc(user.uid).set({
@@ -746,6 +1013,7 @@
                     createdAt: new Date().toISOString(),
                     authProvider: 'google'
                 }, { merge: true });
+                console.log("User data saved to Firestore successfully");
 
                 // Create welcome mood entry
                 const today = new Date();
@@ -759,8 +1027,17 @@
                         createdAt: new Date().toISOString(),
                         emojiID: ["/emoji/happy"]
                     });
+                console.log("Initial mood entry created");
+
+                //force refresh the auth token to ensure lastest data is available
+                await user.getIdToken(true);
+                console.log("Auth token refreshed");
 
                 showSuccess('Login successful! Redirecting to dashboard...');
+                // Store a flag in sessionStorage to indicate we're coming from Google auth
+                sessionStorage.setItem('googleAuthLogin', 'true');
+                sessionStorage.setItem('userDisplayName', user.displayName);
+        
                 setTimeout(() => {
                     window.location.href = 'dashboard.html';
                 }, 1500);

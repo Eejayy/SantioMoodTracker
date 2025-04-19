@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" href="santio3.png" type="image/x-icon">
+    <title>Santio - History</title>
+    <!-- Import Firebase SDKs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-app-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-auth-compat.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/firebase/9.22.0/firebase-firestore-compat.min.js"></script>
+    <!-- Import Firebase config -->
+    <script src="config.js"></script>
+    <!-- Import Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Santio</title>
+    <link rel="stylesheet" href="history.css"> <!-- 👈 Link to your CSS -->
+<body>
+    <div class="animated-background">
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+        <div class="circle"></div>
+    </div>
+    <!-- Sidebar -->
+    <div class="sidebar glassmorphism" id="sidebar">
+        <div class="sidebar-header">
+            <a href="#" class="logo">Santio Mood</a>
+        </div>
+        <div class="sidebar-menu">
+            <a href="dashboard.html" class="menu-item">
+                <i class="fas fa-chart-bar"></i>
+                Dashboard
+            </a>
+            <a href="history.html" class="menu-item active">
+                <i class="fas fa-history"></i>
+                Mood History
+            </a>
+        </div>
+        <div class="user-info">
+            <div class="avatar" id="user-avatar">U</div>
+            <div class="user-details">
+                <div class="user-name" id="user-name">User</div>
+                <div class="user-email" id="user-email">user@example.com</div>
+            </div>
+            <button class="logout-btn" id="logout-btn">
+                <i class="fas fa-sign-out-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="header">
+            <div class="page-title">Mood History</div>
+            <div id="current-date"></div>
+        </div>
+
+        <div class="history-container">
+            <!-- Filters -->
+            <div class="filters-card">
+                <div class="filters-row">
+                    <div class="filter-group">
+                        <div class="filter-label">Month:</div>
+                        <select id="month-filter" class="filter-select">
+                            <!-- Will be populated dynamically -->
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <div class="filter-label">Sort:</div>
+                        <select id="sort-filter" class="filter-select">
+                            <option value="newest">Newest First</option>
+                            <option value="oldest">Oldest First</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mood Entries -->
+            <div class="history-entries" id="mood-entries">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+
+            <!-- Pagination -->
+            <div class="pagination" id="pagination">
+                <!-- Will be populated dynamically -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Mood Modal -->
+    <div class="modal" id="mood-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="mood-modal-title">Edit Mood Entry</div>
+                <button class="modal-close" id="mood-modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <div class="form-label">Date</div>
+                    <div id="mood-date"></div>
+                </div>
+                <div class="form-group">
+                    <div class="form-label">How are you feeling?</div>
+                    <div class="emoji-selector" id="emoji-selector">
+                        <!-- Emojis will be loaded here -->
+                        <div class="loading">
+                            <div class="spinner"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="mood-note" class="form-label">Notes</label>
+                    <textarea id="mood-note" class="form-control" placeholder="Write your thoughts here..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="delete-mood-btn" style="margin-right: auto;">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+                <button class="btn btn-secondary" id="cancel-mood-btn">Cancel</button>
+                <button class="btn btn-primary" id="save-mood-btn">
+                    <i class="fas fa-check"></i> Save
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Dialog -->
+    <div class="confirmation-dialog" id="confirmation-dialog">
+        <div class="confirmation-content">
+            <div class="confirmation-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="confirmation-message" id="confirmation-message">
+                Are you sure you want to delete this mood entry?
+            </div>
+            <div class="confirmation-buttons">
+                <button class="btn btn-secondary" id="cancel-confirmation-btn">Cancel</button>
+                <button class="btn btn-danger" id="confirm-action-btn">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get Firebase services
+        const { auth, db } = initializeFirebase();
+
+        // Global variables
+        let currentUser = null;
+        let emojis = [];
+        let selectedDate = new Date();
+        let selectedEmojis = [];
+        let currentMoodId = null;
+        let isEditMode = false;
+        let currentPage = 1;
+        let entriesPerPage = 10;
+        let totalPages = 1;
+        let allEntries = [];
+        let filteredEntries = [];
+
+        // DOM Elements
+        // const firebaseConfig = JSON.parse(process.env.FIREBASE_CONFIG);
+        const userAvatar = document.getElementById('user-avatar');
+        const userName = document.getElementById('user-name');
+        const userEmail = document.getElementById('user-email');
+        const logoutBtn = document.getElementById('logout-btn');
+        const currentDateDisplay = document.getElementById('current-date');
+        const monthFilter = document.getElementById('month-filter');
+        const sortFilter = document.getElementById('sort-filter');
+        const moodEntriesContainer = document.getElementById('mood-entries');
+        const paginationContainer = document.getElementById('pagination');
+        const moodModal = document.getElementById('mood-modal');
+        const moodModalTitle = document.getElementById('mood-modal-title');
+        const moodModalClose = document.getElementById('mood-modal-close');
+        const moodDateDisplay = document.getElementById('mood-date');
+        const emojiSelector = document.getElementById('emoji-selector');
+        const moodNoteInput = document.getElementById('mood-note');
+        const saveMoodBtn = document.getElementById('save-mood-btn');
+        const cancelMoodBtn = document.getElementById('cancel-mood-btn');
+        const deleteMoodBtn = document.getElementById('delete-mood-btn');
+        const confirmationDialog = document.getElementById('confirmation-dialog');
+        const confirmationMessage = document.getElementById('confirmation-message');
+        const cancelConfirmationBtn = document.getElementById('cancel-confirmation-btn');
+        let confirmActionBtn = document.getElementById('confirm-action-btn');
+
+        // Auth state change listener
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                currentUser = user;
+                console.log("User authenticated:", user.uid);
+                
+                // Update user info and initialize app
+                updateUserInfo(user);
+                initializeApp();
+            } else {
+                // Redirect to login page if no user is signed in
+                console.log("No authenticated user, redirecting to login page");
+                window.location.href = 'login.html';
+            }
+        });
+
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Ensure Firebase is initialized
+            const auth = firebase.auth();
+
+            // Filter events
+            monthFilter.addEventListener('change', applyFilters);
+            sortFilter.addEventListener('change', applyFilters);
+
+            // Mood modal events
+            moodModalClose.addEventListener('click', closeMoodModal);
+            cancelMoodBtn.addEventListener('click', closeMoodModal);
+            saveMoodBtn.addEventListener('click', saveMoodEntry);
+            deleteMoodBtn.addEventListener('click', confirmDeleteMood);
+
+            // Confirmation dialog events
+            cancelConfirmationBtn.addEventListener('click', closeConfirmationDialog);
+            
+            logoutBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log("Logout button clicked");
+                logout();
+            });
+        });
+
+        // Initialize the application
+        function initializeApp() {
+            console.log("Initializing app");
+            updateCurrentDate();
+            populateMonthFilter();
+            
+            loadEmojis()
+                .then(() => {
+                    loadMoodEntries();
+                })
+                .catch(error => {
+                    console.error("Error initializing app:", error);
+                    // Show error to user
+                    alert("Error loading app data. Please refresh the page.");
+                });
+        }
+
+        // Update user information
+        function updateUserInfo(user) {
+            if (!user) return;
+            
+            // Set initial values
+            const initials = (user.displayName || user.email || 'U').charAt(0).toUpperCase();
+            userAvatar.textContent = initials;
+            userName.textContent = user.displayName || 'User';
+            userEmail.textContent = user.email || '';
+
+            // Get additional user data from Firestore
+            db.collection('users').doc(user.uid).get()
+                .then(doc => {
+                    if (doc.exists) {
+                        const userData = doc.data();
+                        if (userData.name) {
+                            userName.textContent = userData.name;
+
+                            // Update avatar with initials from name
+                            const nameParts = userData.name.split(' ');
+                            const newInitials = nameParts.map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                            userAvatar.textContent = newInitials;
+                        }
+                        if (userData.email) {
+                            userEmail.textContent = userData.email;
+                        }
+                        if(userData.photoURL) {
+                            const avatarImg = document.createElement('img');
+                            avatarImg.src = userData.photoURL;
+                            avatarImg.alt = "User Avatar";
+                            avatarImg.style.width = "100%";
+                            avatarImg.style.height = "100%";
+                            avatarImg.style.objectFit = "cover";
+                            avatarImg.style.borderRadius = "50%";
+                            userAvatar.textContent = '';
+                            userAvatar.appendChild(avatarImg);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error("Error fetching user data:", error);
+                });
+        }
+
+        // Update current date display
+        function updateCurrentDate() {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const dateStr = new Date().toLocaleDateString('en-US', options);
+            currentDateDisplay.textContent = dateStr;
+        }
+
+        // Load emojis from Firestore
+        async function loadEmojis() {
+            try {
+                const snapshot = await db.collection('emoji').get();
+                emojis = [];
+                
+                // Base URL for GitHub hosted emojis
+                const baseGitHubUrl = 'https://raw.githubusercontent.com/Eejayy/SantioMoodTracker/main/emojis/';
+        
+                snapshot.forEach(doc => {
+                    const emojiData = doc.data();
+
+                    //Original URL from database
+                    let imageURL = emojiData.imageURL;
+                    //check if URL seems valid (contains http/https)
+                    if(!imageURL || !imageURL.match(/^https?:\/\//i)){
+                        //try to generate a valid URL based on the emoji name
+                        const emojiName = emojiData.name.toLowerCase();
+                        imageURL = `${baseGitHubUrl}${emojiName}.png`;
+                    }
+                    emojis.push({
+                        id: doc.id,
+                        name: emojiData.name,
+                        imageURL: imageURL
+                    });
+                });
+                return emojis;
+            } catch (error) {
+                console.error("Error loading emojis:", error);
+                throw error;
+            }
+        }
+
+        // Populate the month filter with available months
+        function populateMonthFilter() {
+            const currentDate = new Date();
+            const currentYear = currentDate.getFullYear();
+            const currentMonth = currentDate.getMonth();
+            
+            // Clear existing options
+            monthFilter.innerHTML = '';
+            
+            // Add "All Months" option
+            const allOption = document.createElement('option');
+            allOption.value = 'all';
+            allOption.textContent = 'All Months';
+            monthFilter.appendChild(allOption);
+            
+            // Add options for each month from January of current year to current month
+            for (let month = 0; month <= currentMonth; month++) {
+                const date = new Date(currentYear, month, 1);
+                const monthOption = document.createElement('option');
+                monthOption.value = `${currentYear}-${month + 1}`;
+                monthOption.textContent = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                monthFilter.appendChild(monthOption);
+            }
+            
+            // Set default to current month
+            monthFilter.value = `${currentYear}-${currentMonth + 1}`;
+        }
+
+        // Load all mood entries for the user
+        async function loadMoodEntries() {
+            try {
+                // Show loading spinner
+                moodEntriesContainer.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+                
+                // Get all mood entries for the user
+                const snapshot = await db.collection('users').doc(currentUser.uid)
+                    .collection('moods')
+                    // .orderBy(firebase.firestore.FieldPath.documentId(), 'desc')
+                    .get();
+                
+                // Process entries
+                allEntries = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    const dateId = doc.id; // Format: YYYY-MM-DD
+                    
+                    // Convert date string to Date object
+                    const dateParts = dateId.split('-');
+                    const date = new Date(
+                        parseInt(dateParts[0]), 
+                        parseInt(dateParts[1]) - 1, 
+                        parseInt(dateParts[2])
+                    );
+                    
+                    // Get time from createdAt if available
+                    let createdTime = '';
+                    if (data.createdAt) {
+                        try {
+                            const createdDate = new Date(data.createdAt);
+                            createdTime = createdDate.toLocaleTimeString('en-US', {
+                                hour: '2-digit', 
+                                minute: '2-digit'
+                            });
+                        } catch (e) {
+                            console.warn('Invalid createdAt date:', data.createdAt);
+                        }
+                    }
+                    
+                    // Create entry object
+                    allEntries.push({
+                        id: dateId,
+                        date: date,
+                        displayDate: date.toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        }),
+                        displayTime: createdTime,
+                        note: data.note || '',
+                        emojiIDs: data.emojiID ? data.emojiID.map(path => path.split('/').pop()) : [],
+                        createdAt: data.createdAt || ''
+                    });
+                });
+                
+                console.log(`Loaded ${allEntries.length} mood entries`);
+                // Sort entries in memory by date (newest first)
+                allEntries.sort((a, b) => b.date - a.date);
+                
+                // Apply current filters
+                applyFilters();
+                
+            } catch (error) {
+                console.error("Error loading mood entries:", error);
+                moodEntriesContainer.innerHTML = '<div class="no-entries">Error loading mood entries. Please try again.</div>';
+            }
+        }
+
+        // Apply filters and sort entries
+        function applyFilters() {
+            const monthValue = monthFilter.value;
+            const sortValue = sortFilter.value;
+            
+            // Filter by month
+            if (monthValue === 'all') {
+                filteredEntries = [...allEntries];
+            } else {
+                const [year, month] = monthValue.split('-').map(Number);
+                filteredEntries = allEntries.filter(entry => {
+                    return entry.date.getFullYear() === year && 
+                           entry.date.getMonth() === month - 1;
+                });
+            }
+            
+            // Sort entries
+            if (sortValue === 'newest') {
+                filteredEntries.sort((a, b) => b.date - a.date);
+            } else {
+                filteredEntries.sort((a, b) => a.date - b.date);
+            }
+            
+            // Reset to first page
+            currentPage = 1;
+            
+            // Render entries
+            renderMoodEntries();
+        }
+
+        // Render mood entries with pagination
+        function renderMoodEntries() {
+            // Calculate total pages
+            totalPages = Math.max(1, Math.ceil(filteredEntries.length / entriesPerPage));
+            
+            // Adjust current page if needed
+            if (currentPage > totalPages) {
+                currentPage = totalPages;
+            }
+            
+            // Get entries for current page
+            const startIndex = (currentPage - 1) * entriesPerPage;
+            const endIndex = Math.min(startIndex + entriesPerPage, filteredEntries.length);
+            const currentEntries = filteredEntries.slice(startIndex, endIndex);
+            
+            // Clear container
+            moodEntriesContainer.innerHTML = '';
+            
+            // Show message if no entries
+            if (currentEntries.length === 0) {
+                moodEntriesContainer.innerHTML = '<div class="no-entries">No mood entries found for the selected month.</div>';
+                paginationContainer.innerHTML = '';
+                return;
+            }
+            
+            // Create entry elements
+            currentEntries.forEach(entry => {
+                const entryCard = document.createElement('div');
+                entryCard.className = 'mood-entry-card';
+                entryCard.dataset.entryId = entry.id;
+                
+                // Add click event to open edit modal
+                entryCard.addEventListener('click', () => openEditMoodModal(entry.date, entry.id));
+                
+                // Create header with date and time
+                const entryHeader = document.createElement('div');
+                entryHeader.className = 'mood-entry-header';
+                
+                const dateEl = document.createElement('div');
+                dateEl.className = 'mood-date';
+                dateEl.textContent = entry.displayDate;
+                
+                const timeEl = document.createElement('div');
+                timeEl.className = 'mood-time';
+                timeEl.textContent = entry.displayTime;
+                
+                entryHeader.appendChild(dateEl);
+                entryHeader.appendChild(timeEl);
+                
+                // Create emoji container
+                const emojiContainer = document.createElement('div');
+                emojiContainer.className = 'mood-emojis';
+                
+                // Add emojis
+                entry.emojiIDs.forEach(emojiId => {
+                    const emoji = emojis.find(e => e.id === emojiId);
+                    if (!emoji) return;
+                    
+                    const emojiEl = document.createElement('div');
+                    emojiEl.className = 'mood-emoji';
+                    
+                    const img = document.createElement('img');
+                    img.src = emoji.imageURL;
+                    img.alt = emoji.name;
+                    
+                    // Add error handler
+                    img.onerror = function() {
+                        console.warn(`Failed to load emoji image: ${emoji.imageURL}`);
+                        
+                        // Try fallback URL
+                        const fallbackUrl = `https://raw.githubusercontent.com/Eejayy/SantioMoodTracker/main/emojis/${emoji.name.toLowerCase()}.png`;
+                        this.src = fallbackUrl;
+                        
+                        // If fallback fails, use generic emoji
+                        this.onerror = function() {
+                            this.src = 'https://em-content.zobj.net/thumbs/120/apple/354/neutral-face_1f610.png';
+                            this.onerror = null; // Prevent infinite loop
+                        };
+                    };
+                    
+                    emojiEl.appendChild(img);
+                    emojiContainer.appendChild(emojiEl);
+                });
+                
+                // Create note element
+                const noteEl = document.createElement('div');
+                noteEl.className = 'mood-note';
+                noteEl.textContent = entry.note;
+                
+                // Add all elements to card
+                entryCard.appendChild(entryHeader);
+                entryCard.appendChild(emojiContainer);
+                if (entry.note) {
+                    entryCard.appendChild(noteEl);
+                }
+                
+                moodEntriesContainer.appendChild(entryCard);
+            });
+            
+            // Render pagination
+            renderPagination();
+        }
+
+        // Render pagination controls
+        function renderPagination() {
+            paginationContainer.innerHTML = '';
+            
+            // Don't show pagination if only one page
+            if (totalPages <= 1) {
+                return;
+            }
+            
+            // Previous button
+            const prevBtn = document.createElement('button');
+            prevBtn.className = 'page-btn';
+            prevBtn.innerHTML = '<i class="fas fa-chevron-left"></i>';
+            if (currentPage === 1) {
+                prevBtn.classList.add('disabled');
+            } else {
+                prevBtn.addEventListener('click', () => {
+                    if (currentPage > 1) {
+                        currentPage--;
+                        renderMoodEntries();
+                    }
+                });
+            }
+            paginationContainer.appendChild(prevBtn);
+            
+            // Page buttons
+            const maxPageButtons = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxPageButtons / 2));
+            let endPage = Math.min(totalPages, startPage + maxPageButtons - 1);
+            
+            // Adjust if at the end
+            if (endPage - startPage + 1 < maxPageButtons) {
+                startPage = Math.max(1, endPage - maxPageButtons + 1);
+            }
+            
+            // First page button if not showing from the beginning
+            if (startPage > 1) {
+                const firstBtn = document.createElement('button');
+                firstBtn.className = 'page-btn';
+                firstBtn.textContent = '1';
+                firstBtn.addEventListener('click', () => {
+                    currentPage = 1;
+                    renderMoodEntries();
+                });
+                paginationContainer.appendChild(firstBtn);
+                
+                // Ellipsis if there's a gap
+                if (startPage > 2) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.style.margin = '0 0.5rem';
+                    paginationContainer.appendChild(ellipsis);
+                }
+            }
+            
+            // Page number buttons
+            for (let i = startPage; i <= endPage; i++) {
+                const pageBtn = document.createElement('button');
+                pageBtn.className = 'page-btn';
+                if (i === currentPage) {
+                    pageBtn.classList.add('active');
+                }
+                pageBtn.textContent = i;
+                pageBtn.addEventListener('click', () => {
+                    currentPage = i;
+                    renderMoodEntries();
+                });
+                paginationContainer.appendChild(pageBtn);
+            }
+            
+            // Last page button if not showing to the end
+            if (endPage < totalPages) {
+                // Ellipsis if there's a gap
+                if (endPage < totalPages - 1) {
+                    const ellipsis = document.createElement('span');
+                    ellipsis.textContent = '...';
+                    ellipsis.style.margin = '0 0.5rem';
+                    paginationContainer.appendChild(ellipsis);
+                }
+                
+                const lastBtn = document.createElement('button');
+                lastBtn.className = 'page-btn';
+                lastBtn.textContent = totalPages;
+                lastBtn.addEventListener('click', () => {
+                    currentPage = totalPages;
+                    renderMoodEntries();
+                });
+                paginationContainer.appendChild(lastBtn);
+            }
+            
+            // Next button
+            const nextBtn = document.createElement('button');
+            nextBtn.className = 'page-btn';
+            nextBtn.innerHTML = '<i class="fas fa-chevron-right"></i>';
+            if (currentPage === totalPages) {
+                nextBtn.classList.add('disabled');
+            } else {
+                nextBtn.addEventListener('click', () => {
+                    if (currentPage < totalPages) {
+                        currentPage++;
+                        renderMoodEntries();
+                    }
+                });
+            }
+            paginationContainer.appendChild(nextBtn);
+        }
+
+        // Open edit mood modal
+        async function openEditMoodModal(date, moodId) {
+            try {
+                // Get the mood entry from Firestore
+                const doc = await db.collection('users').doc(currentUser.uid)
+                    .collection('moods')
+                    .doc(moodId)
+                    .get();
+                
+                if (!doc.exists) {
+                    console.error(`Mood entry with ID ${moodId} not found`);
+                    return;
+                }
+                
+                const moodData = doc.data();
+                
+                // Update the global selectedDate variable
+                selectedDate = new Date(date);
+                
+                // Set modal title
+                moodModalTitle.textContent = 'Edit Mood Entry';
+                
+                // Format date
+                const formattedDate = date.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+                moodDateDisplay.textContent = formattedDate;
+                
+                // Set form values
+                moodNoteInput.value = moodData.note || '';
+                
+                // Set selected emojis
+                selectedEmojis = moodData.emojiID ? 
+                    moodData.emojiID.map(path => path.split('/').pop()) : 
+                    [];
+                
+                // Set mood ID and edit mode
+                currentMoodId = moodId;
+                isEditMode = true;
+                
+                // Show delete button
+                deleteMoodBtn.style.display = 'block';
+                
+                // Load emojis
+                loadEmojiSelector();
+                
+                // Open modal
+                moodModal.style.display = 'flex';
+                
+            } catch (error) {
+                console.error("Error opening edit modal:", error);
+                alert("Error loading mood entry. Please try again.");
+            }
+        }
+
+        // Load emoji selector
+        function loadEmojiSelector() {
+            // Clear container first
+            emojiSelector.innerHTML = '';
+            
+            // Create emoji items
+            emojis.forEach(emoji => {
+                const emojiItem = document.createElement('div');
+                emojiItem.className = 'emoji-item';
+                if (selectedEmojis.includes(emoji.id)) {
+                    emojiItem.classList.add('selected');
+                }
+                
+                const emojiImg = document.createElement('img');
+                emojiImg.className = 'emoji-icon';
+                emojiImg.src = emoji.imageURL;
+                emojiImg.alt = emoji.name;
+                
+                // Add error handler
+                emojiImg.onerror = function() {
+                    console.warn(`Failed to load emoji image: ${emoji.imageURL}`);
+                    
+                    // Try to construct a GitHub URL from the emoji name
+                    const fallbackUrl = `https://raw.githubusercontent.com/Eejayy/SantioMoodTracker/main/emojis/${emoji.name.toLowerCase()}.png`;
+                    console.log(`Using fallback URL: ${fallbackUrl}`);
+                    this.src = fallbackUrl;
+                    
+                    // If that fails too, use a generic emoji fallback
+                    this.onerror = function() {
+                        console.warn(`Fallback also failed, using generic emoji`);
+                        this.src = 'https://em-content.zobj.net/thumbs/120/apple/354/neutral-face_1f610.png';
+                        this.onerror = null; // Prevent infinite loop
+                    };
+                };
+                
+                const emojiName = document.createElement('div');
+                emojiName.className = 'emoji-name';
+                emojiName.textContent = emoji.name;
+                
+                emojiItem.appendChild(emojiImg);
+                
+                // Add click event
+                emojiItem.addEventListener('click', () => {
+                    toggleEmojiSelection(emoji.id, emojiItem);
+                });
+                
+                emojiSelector.appendChild(emojiItem);
+            });
+        }
+
+        // Toggle emoji selection
+        function toggleEmojiSelection(emojiId, emojiElement) {
+            const index = selectedEmojis.indexOf(emojiId);
+            
+            if (index === -1) {
+                // Add emoji
+                selectedEmojis.push(emojiId);
+                emojiElement.classList.add('selected');
+            } else {
+                // Remove emoji
+                selectedEmojis.splice(index, 1);
+                emojiElement.classList.remove('selected');
+            }
+        }
+
+        // Close mood modal
+        function closeMoodModal() {
+            moodModal.style.display = 'none';
+        }
+
+        // Save mood entry
+        function saveMoodEntry() {
+            // Validate form
+            if (selectedEmojis.length === 0) {
+                alert('Please select at least one emoji.');
+                return;
+            }
+            
+            // Get values
+            const note = moodNoteInput.value.trim();
+            const dateStr = formatDateForId(selectedDate);
+            
+            // Format emoji IDs
+            const emojiIDs = selectedEmojis.map(id => `/emoji/${id}`);
+            
+            // Prepare data
+            const moodData = {
+                note: note,
+                createdAt: new Date().toISOString(),
+                emojiID: emojiIDs
+            };
+            
+            // Save to Firestore
+            const moodRef = db.collection('users').doc(currentUser.uid)
+                .collection('moods').doc(dateStr);
+            
+            moodRef.set(moodData)
+                .then(() => {
+                    // Close modal
+                    closeMoodModal();
+                    
+                    // Reload entries
+                    loadMoodEntries();
+                })
+                .catch(error => {
+                    console.error("Error saving mood entry:", error);
+                    alert('Error saving mood entry. Please try again.');
+                });
+        }
+
+        // Confirm delete mood
+        function confirmDeleteMood() {
+            // Set the confirmation message
+            confirmationMessage.textContent = 'Are you sure you want to delete this mood entry?';
+            
+            // Show the confirmation dialog
+            confirmationDialog.style.display = 'flex';
+            
+            // Get fresh reference to the confirm action button
+            confirmActionBtn = document.getElementById('confirm-action-btn');
+            
+            if (confirmActionBtn) {
+                // Create a new button to replace the existing one
+                const newConfirmBtn = confirmActionBtn.cloneNode(true);
+                confirmActionBtn.parentNode.replaceChild(newConfirmBtn, confirmActionBtn);
+                confirmActionBtn = newConfirmBtn;
+                
+                // Add the delete action handler
+                confirmActionBtn.addEventListener('click', deleteMoodEntry);
+            } else {
+                console.error("Could not find confirm action button!");
+            }
+        }
+
+        // Delete mood entry
+        function deleteMoodEntry() {
+            // Hide confirmation dialog
+            closeConfirmationDialog();
+            
+            if (!currentMoodId) {
+                console.error("No mood ID available for deletion");
+                return;
+            }
+            
+            console.log("Deleting mood entry with ID:", currentMoodId);
+            
+            // Delete from Firestore
+            db.collection('users').doc(currentUser.uid)
+                .collection('moods').doc(currentMoodId)
+                .delete()
+                .then(() => {
+                    console.log("Successfully deleted mood entry");
+                    
+                    // Close modal
+                    closeMoodModal();
+                    
+                    // Reload entries
+                    loadMoodEntries();
+                })
+                .catch(error => {
+                    console.error("Error deleting mood entry:", error);
+                    alert("Error deleting mood entry. Please try again.");
+                });
+        }
+
+        // Close confirmation dialog
+        function closeConfirmationDialog() {
+            confirmationDialog.style.display = 'none';
+        }
+
+        // Format date for Firestore document ID
+        function formatDateForId(date) {
+            const year = date.getFullYear();
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const day = date.getDate().toString().padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        // Logout function
+        function logout() {
+            console.log("Logout function called");
+            auth.signOut()
+                .then(() => {
+                    console.log("User signed out successfully");
+                    // Redirect to login page
+                    window.location.href = 'login.html';
+                })
+                .catch(error => {
+                    console.error("Error signing out:", error);
+                    alert("Error signing out: " + error.message);
+                });
+        }
+    </script>
+</body>
+</html>
