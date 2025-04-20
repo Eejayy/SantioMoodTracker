@@ -12,6 +12,7 @@
     <!-- Import Firebase config -->
     <script src="config.js"></script>
     <!-- Import Font Awesome -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
     <meta charset="UTF-8">
@@ -192,6 +193,84 @@
         const cancelConfirmationBtn = document.getElementById('cancel-confirmation-btn');
         let confirmActionBtn = document.getElementById('confirm-action-btn');
 
+        // Encryption function for notes
+        function encryptNote(note, userId) {
+            if (!note || note.trim() === '') return '';
+            
+            try {
+                // Create a key from the user's ID (adding a salt for extra security)
+                const key = CryptoJS.PBKDF2(userId, 'santio-mood-tracker-salt', {
+                    keySize: 256 / 32,
+                    iterations: 1000
+                });
+                
+                // Encrypt the note
+                const encrypted = CryptoJS.AES.encrypt(note, key.toString());
+                return encrypted.toString();
+            } catch (error) {
+                console.error("Error encrypting note:", error);
+                return note; // Return the original note if encryption fails
+            }
+        }
+
+        // Decryption function for notes
+        function decryptNote(encryptedNote, userId) {
+            if (!encryptedNote || encryptedNote.trim() === '') return '';
+            
+            try {
+                // Check if the note is already encrypted
+                // This helps with existing notes that weren't encrypted before
+                if (!encryptedNote.startsWith('U2F') && !encryptedNote.startsWith('Enc')) {
+                    return encryptedNote; // Return as is if doesn't look encrypted
+                }
+                
+                // Create the same key used for encryption
+                const key = CryptoJS.PBKDF2(userId, 'santio-mood-tracker-salt', {
+                    keySize: 256 / 32,
+                    iterations: 1000
+                });
+                
+                // Decrypt the note
+                const decrypted = CryptoJS.AES.decrypt(encryptedNote, key.toString());
+                return decrypted.toString(CryptoJS.enc.Utf8);
+            } catch (error) {
+                console.error("Error decrypting note:", error);
+                return "⚠️ [Encrypted content]"; // Show this if decryption fails
+            }
+        }
+
+        // Function to determine if a string is likely encrypted
+        function isLikelyEncrypted(text) {
+            // Common patterns found in CryptoJS encrypted strings
+            return text && (
+                text.startsWith('U2F') || // Base64 pattern
+                text.length > 40 && !/[^\x20-\x7E]/.test(text) // Long with only printable ASCII chars
+            );
+        }
+
+        //role check function 
+        async function checkUserRole() {
+            const user = auth.currentUser;
+            if (!user) {
+                // Redirect to login if not signed in
+                window.location.href = 'login.html';
+                return null;
+            }
+            
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    return userData.role || 'user'; // Default to 'user' if no role is set
+                }
+                return 'user';
+            } catch (error) {
+                console.error("Error fetching user role:", error);
+                return 'user';
+            }
+        }
+
+
         // Auth state change listener
         auth.onAuthStateChanged(user => {
             if (user) {
@@ -207,6 +286,18 @@
                 window.location.href = 'login.html';
             }
         });
+
+        //function to initialize page with role check
+        async function initializePageWithRoleCheck() {
+            const userRole = await checkUserRole();
+            console.log("User role:", userRole);
+            
+            // Hide admin-only elements if not admin
+            const adminElements = document.querySelectorAll('.admin-only');
+            adminElements.forEach(element => {
+                element.style.display = userRole === 'admin' ? 'block' : 'none';
+            });
+        }
 
         // Event Listeners
         document.addEventListener('DOMContentLoaded', function() {
@@ -235,13 +326,16 @@
 
         // Initialize the application
         function initializeApp() {
-            console.log("Initializing app");
+            console.log("Initializing History app");
             updateCurrentDate();
             populateMonthFilter();
             
             loadEmojis()
                 .then(() => {
                     loadMoodEntries();
+
+                    // Add role check after loading basic data
+                    initializePageWithRoleCheck();
                 })
                 .catch(error => {
                     console.error("Error initializing app:", error);
@@ -401,6 +495,12 @@
                             console.warn('Invalid createdAt date:', data.createdAt);
                         }
                     }
+
+                    // Decrypt note if needed
+                    let noteText = data.note || '';
+                    if (data.isEncrypted || isLikelyEncrypted(noteText)) {
+                        noteText = decryptNote(noteText, currentUser.uid);
+                    }
                     
                     // Create entry object
                     allEntries.push({
@@ -413,7 +513,9 @@
                             day: 'numeric' 
                         }),
                         displayTime: createdTime,
-                        note: data.note || '',
+                        note: noteText, // Store decrypted note
+                        rawNote: data.note || '', // Keep raw note for reference
+                        isEncrypted: data.isEncrypted || false,
                         emojiIDs: data.emojiID ? data.emojiID.map(path => path.split('/').pop()) : [],
                         createdAt: data.createdAt || ''
                     });
@@ -702,9 +804,15 @@
                     day: 'numeric' 
                 });
                 moodDateDisplay.textContent = formattedDate;
+
+                // Decrypt the note if it's encrypted
+                let noteText = moodData.note || '';
+                if (moodData.isEncrypted || isLikelyEncrypted(noteText)) {
+                    noteText = decryptNote(noteText, currentUser.uid);
+                }
                 
-                // Set form values
-                moodNoteInput.value = moodData.note || '';
+                // Set form values with decrypted note
+                moodNoteInput.value = noteText;
                 
                 // Set selected emojis
                 selectedEmojis = moodData.emojiID ? 
@@ -814,12 +922,17 @@
             
             // Format emoji IDs
             const emojiIDs = selectedEmojis.map(id => `/emoji/${id}`);
+
+            // Encrypt the note before saving
+            const encryptedNote = encryptNote(note, currentUser.uid);
+    
             
             // Prepare data
             const moodData = {
-                note: note,
+                note: encryptedNote,
                 createdAt: new Date().toISOString(),
-                emojiID: emojiIDs
+                emojiID: emojiIDs,
+                isEncrypted: true // Add a flag to identify encrypted entries
             };
             
             // Save to Firestore

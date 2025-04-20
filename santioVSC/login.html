@@ -462,10 +462,15 @@
         }
         .introduction{
             width: 500px;
+            color: #3d2a20;
         }
 
         .intro-header2{
             font-size: 20px;
+        }
+
+        .intro-summary{
+            text-align: justify;
         }
 
         .logo-people {
@@ -755,6 +760,28 @@
         const loginPassword = document.getElementById('login-password');
         const signupConfirmPassword = document.getElementById('signup-confirm-password');
 
+        // check user role on dashboard pages
+        async function checkUserRole() {
+            const user = auth.currentUser;
+            if (!user) {
+                // Redirect to login if not signed in
+                window.location.href = 'login.html';
+                return null;
+            }
+            
+            try {
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                if (userDoc.exists) {
+                    const userData = userDoc.data();
+                    return userData.role || 'user'; // Default to 'user' if no role is set
+                }
+                return 'user';
+            } catch (error) {
+                console.error("Error fetching user role:", error);
+                return 'user';
+            }
+        }
+
         // Tab switching functionality - FIXED VERSION
         loginTab.addEventListener('click', function() {
             loginTab.classList.add('active');
@@ -945,6 +972,7 @@
                 await db.collection('users').doc(user.uid).set({
                     name: name,
                     email: email,
+                    role: 'user',
                     createdAt: new Date().toISOString()
                 });
                 
@@ -956,7 +984,7 @@
                     .collection('moods')
                     .doc(dateString)
                     .set({
-                        note: "Welcome to MoodTracker! This is your first mood entry.",
+                        note: "Welcome to Santio Mood Tracker! This is your first mood entry.",
                         createdAt: new Date().toISOString(),
                         emojiID: ["/emoji/happy"]
                     });
@@ -1004,30 +1032,46 @@
                     email: user.email,
                     photoURL: user.photoURL
                 });
-                
-                // Create/update user profile in Firestore
-                await db.collection('users').doc(user.uid).set({
-                    name: user.displayName || 'Google User',
-                    email: user.email,
-                    photoURL: user.photoURL || '',
-                    createdAt: new Date().toISOString(),
-                    authProvider: 'google'
-                }, { merge: true });
-                console.log("User data saved to Firestore successfully");
 
-                // Create welcome mood entry
-                const today = new Date();
-                const dateStr = today.toISOString().split('T')[0];
-                
-                await db.collection('users').doc(user.uid)
-                    .collection('moods')
-                    .doc(dateStr)
-                    .set({
-                        note: "Welcome to MoodTracker! This is your first mood entry.",
+                // Check if this is a new user
+                const userDoc = await db.collection('users').doc(user.uid).get();
+                const isNewUser = !userDoc.exists;
+                        
+                if (isNewUser) {
+                    await db.collection('users').doc(user.uid).set({
+                        name: user.displayName || 'Google User',
+                        email: user.email,
+                        photoURL: user.photoURL || '',
+                        role: 'user',  // Only set default role for new users
                         createdAt: new Date().toISOString(),
-                        emojiID: ["/emoji/happy"]
+                        authProvider: 'google'
                     });
-                console.log("Initial mood entry created");
+                } else {
+                    // For existing users, update without changing role
+                    await db.collection('users').doc(user.uid).set({
+                        name: user.displayName || 'Google User',
+                        email: user.email,
+                        photoURL: user.photoURL || '',
+                        authProvider: 'google',
+                        lastLogin: new Date().toISOString()
+                    }, { merge: true });
+                }
+
+                // Only create welcome mood entry for new users
+                if (isNewUser) {
+                    const today = new Date();
+                    const dateStr = today.toISOString().split('T')[0];
+                    
+                    await db.collection('users').doc(user.uid)
+                        .collection('moods')
+                        .doc(dateStr)
+                        .set({
+                            note: "Welcome to MoodTracker! This is your first mood entry.",
+                            createdAt: new Date().toISOString(),
+                            emojiID: ["/emoji/happy"]
+                        });
+                    console.log("Initial mood entry created for new user");
+                }
 
                 //force refresh the auth token to ensure lastest data is available
                 await user.getIdToken(true);
@@ -1084,10 +1128,31 @@
                 console.log("email: ", email);
                 console.log("name: ", name);
                 console.log("photo path: ", photo);
-
+                // Check if user has a role field and add it if missing
+                db.collection('users').doc(user.uid).get()
+                    .then(doc => {
+                        if (doc.exists) {
+                            const userData = doc.data();
+                            // If no role field exists, add it
+                            if (!userData.hasOwnProperty('role')) {
+                                console.log("Adding missing role field");
+                                db.collection('users').doc(user.uid).update({
+                                    role: 'user'
+                                }).then(() => {
+                                    console.log("Role field added successfully");
+                                }).catch(error => {
+                                    console.error("Error adding role field:", error);
+                                });
+                            } else {
+                                console.log("User already has role:", userData.role);
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error("Error checking user data:", error);
+                    });
                 // Log authentication state
                 console.log('User is signed in:', user.email);
-                
                 // Show logout button when user is signed in
                 logoutContainer.style.display = 'block';
                 
@@ -1174,6 +1239,8 @@
                     return 'Another authentication window is already open.';
                 case 'auth/popup-blocked':
                     return 'Authentication popup was blocked by your browser.';
+                case 'auth/invalid-login-credentials':
+                    return 'Password invalid. Please enter a valid password.'
                 default:
                     return `Authentication error: ${error.message}`;
             }
